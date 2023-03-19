@@ -83,7 +83,7 @@ bool mgos_bme680_init_cfg(const struct mgos_config_bme680 *cfg);
 
 // Initialize BME680 device on a specific I2C bus at specific address (0x76 or
 // 0x77).
-int8_t mgos_bme68_init_dev_i2c(struct bme680_dev *dev, int bus_no, int addr);
+int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr);
 
 #ifdef __cplusplus
 }

@@ -23,7 +23,7 @@
 #include "mgos.h"
 #include "mgos_i2c.h"
 
-#include "bme680.h"
+#include "bme68x.h"
 #include "bsec_interface.h"
 
 #ifndef MGOS_BME680_BSEC_MIN_CAL_CYCLES
@@ -176,7 +176,7 @@ bool mgos_bsec_start(void) {
   return true;
 }
 
-int8_t mgos_bme68_init_dev_i2c(struct bme680_dev *dev, int bus_no, int addr) {
+int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
   dev->intf = BME680_I2C_INTF;
   dev->dev_id = (bus_no << 1) | (addr & 1);
   dev->read = bme680_i2c_read;
