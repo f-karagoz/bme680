@@ -312,7 +312,7 @@ static int mgos_bme680_run_once(int *delay_ms) {
       ("BSEC %lld ctl: process 0x%x, ht %u dur %u ms, gas %d, po %d, to %d, ho "
        "%d, tm %d, next %lld",
        ts, (unsigned) ss.process_data, ss.heater_temperature,
-       ss.heating_duration, ss.run_gas, ss.pressure_oversampling,
+       ss.heater_duration, ss.run_gas, ss.pressure_oversampling,
        ss.temperature_oversampling, ss.humidity_oversampling,
        ss.trigger_measurement, ss.next_call));
   if (ret != BSEC_OK) return ret;
@@ -324,7 +324,7 @@ static int mgos_bme680_run_once(int *delay_ms) {
     s_state->dev.tph_sett.os_temp = ss.temperature_oversampling;
     s_state->dev.gas_sett.run_gas = ss.run_gas;
     s_state->dev.gas_sett.heatr_temp = ss.heater_temperature;
-    s_state->dev.gas_sett.heatr_dur = ss.heating_duration;
+    s_state->dev.gas_sett.heatr_dur = ss.heater_duration;
     s_state->dev.power_mode = BME680_FORCED_MODE;
     bme680_status =
         bme680_set_sensor_settings((BME680_OST_SEL | BME680_OSP_SEL |
