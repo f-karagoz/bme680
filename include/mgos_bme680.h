@@ -22,7 +22,7 @@
 #include "mgos_event.h"
 #include "mgos_sys_config.h"
 
-#include "bme680.h"
+#include "bme68x.h"
 #include "bsec_interface.h"
 
 #ifdef __cplusplus
