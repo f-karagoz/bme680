@@ -30,7 +30,7 @@
 #define MGOS_BME680_BSEC_MIN_CAL_CYCLES 50
 #endif
 
-struct mgos_bme68_state {
+struct mgos_bme68x_state {
   struct mgos_config_bme680 cfg;
   struct bme680_dev dev;
   mgos_timer_id bsec_timer_id;
@@ -42,7 +42,7 @@ struct mgos_bme68_state {
   int iaq_cal_cycles;
 };
 
-static struct mgos_bme68_state *s_state;
+static struct mgos_bme68x_state *s_state;
 
 static void mgos_bsec_timer_cb(void *arg);
 
@@ -451,7 +451,7 @@ bool mgos_bme680_bsec_init(void) {
 bool mgos_bme680_init_cfg(const struct mgos_config_bme680 *cfg) {
   if (!cfg->enable) return false;
 
-  s_state = (struct mgos_bme68_state *) calloc(1, sizeof(*s_state));
+  s_state = (struct mgos_bme68x_state *) calloc(1, sizeof(*s_state));
   if (s_state == NULL) return false;
   s_state->prev_iaq_sr = BSEC_SAMPLE_RATE_DISABLED;
   s_state->cfg = *cfg;
@@ -459,9 +459,9 @@ bool mgos_bme680_init_cfg(const struct mgos_config_bme680 *cfg) {
   int8_t bme680_status =
       mgos_bme68_init_dev_i2c(&s_state->dev, cfg->i2c_bus, cfg->i2c_addr);
 
-  LOG(LL_INFO, ("BME680 @ %d/0x%x init %s", cfg->i2c_bus, cfg->i2c_addr,
-                (bme680_status == BME680_OK ? "ok" : "failed")));
-  if (bme680_status != BME680_OK) return false;
+  LOG(LL_INFO, ("BME68x @ %d/0x%x init %s", cfg->i2c_bus, cfg->i2c_addr,
+                (bme680_status == BME68x_OK ? "ok" : "failed")));
+  if (bme680_status != BME68x_OK) return false;
 
   if (cfg->bsec.enable && !mgos_bme680_bsec_init()) {
     return false;

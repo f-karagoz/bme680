@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 #define MGOS_EV_BME680_BASE MGOS_EVENT_BASE('B', '6', '8')
-enum mgos_bme680_event {
+enum mgos_bme68x_event {
   MGOS_EV_BME680_BSEC_OUTPUT =
       MGOS_EV_BME680_BASE, /* ev_data: struct mgos_bsec_output */
 };
@@ -79,7 +79,7 @@ bool mgos_bsec_start(void);
 // Init BME680 library with specific config.
 // Useful when initialization should be delayed until after application is
 // started.
-bool mgos_bme680_init_cfg(const struct mgos_config_bme680 *cfg);
+bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg);
 
 // Initialize BME680 device on a specific I2C bus at specific address (0x76 or
 // 0x77).
