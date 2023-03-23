@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "mgos_bme68x.h"
+#include "mgos_bme680.h"
 
 #include <stdbool.h>
 #include <stdio.h>
