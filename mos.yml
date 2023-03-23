@@ -15,7 +15,7 @@ libs:
   - location: https://github.com/mongoose-os-libs/i2c
 
 config_schema:
-  - ["bme68x", "o", {"title": "BME680 sensor settings"}]
+  - ["bme68x", "o", {"title": "BME68X sensor settings"}]
   - ["bme68x.enable", "b", false, {"title": "Enable the sensor"}]
   - ["bme68x.i2c_bus", "i", 0, {"title": "I2C bus number"}]
   - ["bme68x.i2c_addr", "i", 0x76, {"title": "I2C device address, 0x76 (primary) or 0x77 (secondary)"}]
@@ -35,7 +35,7 @@ config_schema:
   - ["bme68x.bsec.iaq_auto_cal", "b", true, {"title": "Automatically calibrate IAQ sensor if not calibrated. Will raise IAQ sampling rate to LP until sensor is calibrated."}]
 
 cdefs:
-  BME680_FLOAT_POINT_COMPENSATION: 1
+  BME68X_FLOAT_POINT_COMPENSATION: 1
 
 conds:
   - when: mos.platform == "esp8266"

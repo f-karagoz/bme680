@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "mgos_bme680.h"
+#include "mgos_bme68x.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -26,13 +26,13 @@
 #include "bme68x.h"
 #include "bsec_interface.h"
 
-#ifndef MGOS_BME680_BSEC_MIN_CAL_CYCLES
-#define MGOS_BME680_BSEC_MIN_CAL_CYCLES 50
+#ifndef MGOS_BME68X_BSEC_MIN_CAL_CYCLES
+#define MGOS_BME68X_BSEC_MIN_CAL_CYCLES 50
 #endif
 
 struct mgos_bme68x_state {
-  struct mgos_config_bme680 cfg;
-  struct bme680_dev dev;
+  struct mgos_config_bme68x cfg;
+  struct bme68x_dev dev;
   mgos_timer_id bsec_timer_id;
   mgos_timer_id meas_timer_id;
   int64_t next_ts;
@@ -46,21 +46,21 @@ static struct mgos_bme68x_state *s_state;
 
 static void mgos_bsec_timer_cb(void *arg);
 
-static int8_t bme680_i2c_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *data,
+static int8_t bme68x_i2c_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *data,
                               uint16_t len) {
   struct mgos_i2c *bus = mgos_i2c_get_bus(dev_id >> 1);
-  int addr = BME680_I2C_ADDR_PRIMARY + (dev_id & 1);
+  int addr = BME68X_I2C_ADDR_PRIMARY + (dev_id & 1);
   return mgos_i2c_read_reg_n(bus, addr, reg_addr, len, data) ? 0 : -1;
 }
 
-static int8_t bme680_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data,
+static int8_t bme68x_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data,
                                uint16_t len) {
   struct mgos_i2c *bus = mgos_i2c_get_bus(dev_id >> 1);
-  int addr = BME680_I2C_ADDR_PRIMARY + (dev_id & 1);
+  int addr = BME68X_I2C_ADDR_PRIMARY + (dev_id & 1);
   return mgos_i2c_write_reg_n(bus, addr, reg_addr, len, data) ? 0 : -1;
 }
 
-static void bme680_delay_ms(uint32_t period) {
+static void bme68x_delay_ms(uint32_t period) {
   mgos_msleep(period);
 }
 
@@ -169,7 +169,7 @@ bsec_library_return_t mgos_bsec_set_ps_sample_rate(float sr) {
 
 bool mgos_bsec_start(void) {
   if (s_state == NULL) {
-    LOG(LL_ERROR, ("BME680 sensor not initialized"));
+    LOG(LL_ERROR, ("BME68X sensor not initialized"));
     return false;
   }
   mgos_bsec_timer_cb(NULL);
@@ -177,34 +177,34 @@ bool mgos_bsec_start(void) {
 }
 
 int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
-  dev->intf = BME680_I2C_INTF;
+  dev->intf = BME68X_I2C_INTF;
   dev->dev_id = (bus_no << 1) | (addr & 1);
-  dev->read = bme680_i2c_read;
-  dev->write = bme680_i2c_write;
-  dev->delay_ms = bme680_delay_ms;
-  return bme680_init(dev);
+  dev->read = bme68x_i2c_read;
+  dev->write = bme68x_i2c_write;
+  dev->delay_ms = bme68x_delay_ms;
+  return bme68x_init(dev);
 }
 
 static void mgos_bsec_meas_timer_cb(void *arg) {
-  int8_t bme680_status;
+  int8_t bme68x_status;
   const bsec_bme_settings_t *ss = (bsec_bme_settings_t *) arg;
   int64_t ts = ss->next_call;
   s_state->meas_timer_id = MGOS_INVALID_TIMER_ID;
   if (ss->trigger_measurement) {
-    while (s_state->dev.power_mode != BME680_SLEEP_MODE) {
-      if (bme680_get_sensor_mode(&s_state->dev) != 0) return;
+    while (s_state->dev.power_mode != BME68X_SLEEP_MODE) {
+      if (bme68x_get_sensor_mode(&s_state->dev) != 0) return;
     }
   }
   if (ss->process_data == 0) return;
   uint8_t num_inputs = 0;
   bsec_input_t inputs[BSEC_MAX_PHYSICAL_SENSOR];
-  static struct bme680_field_data data;
-  bme680_status = bme680_get_sensor_data(&data, &s_state->dev);
-  if (bme680_status != 0) {
-    LOG(LL_ERROR, ("Failed to read sensor data: %d", bme680_status));
+  static struct bme68x_field_data data;
+  bme68x_status = bme68x_get_sensor_data(&data, &s_state->dev);
+  if (bme68x_status != 0) {
+    LOG(LL_ERROR, ("Failed to read sensor data: %d", bme68x_status));
     return;
   }
-  if (data.status & BME680_NEW_DATA_MSK) {
+  if (data.status & BME68X_NEW_DATA_MSK) {
     if (ss->process_data & BSEC_PROCESS_PRESSURE) {
       inputs[num_inputs].sensor_id = BSEC_INPUT_PRESSURE;
       inputs[num_inputs].signal = data.pressure;
@@ -214,7 +214,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
     if (ss->process_data & BSEC_PROCESS_TEMPERATURE) {
       /* Place temperature sample into input struct */
       inputs[num_inputs].sensor_id = BSEC_INPUT_TEMPERATURE;
-#ifdef BME680_FLOAT_POINT_COMPENSATION
+#ifdef BME68X_FLOAT_POINT_COMPENSATION
       inputs[num_inputs].signal = data.temperature;
 #else
       inputs[num_inputs].signal = data.temperature / 100.0f;
@@ -228,7 +228,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
     }
     if (ss->process_data & BSEC_PROCESS_HUMIDITY) {
       inputs[num_inputs].sensor_id = BSEC_INPUT_HUMIDITY;
-#ifdef BME680_FLOAT_POINT_COMPENSATION
+#ifdef BME68X_FLOAT_POINT_COMPENSATION
       inputs[num_inputs].signal = data.humidity;
 #else
       inputs[num_inputs].signal = data.humidity / 1000.0f;
@@ -237,7 +237,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
       num_inputs++;
     }
     if (ss->process_data & BSEC_PROCESS_GAS &&
-        data.status & BME680_GASM_VALID_MSK) {
+        data.status & BME68X_GASM_VALID_MSK) {
       inputs[num_inputs].sensor_id = BSEC_INPUT_GASRESISTOR;
       inputs[num_inputs].signal = data.gas_resistance;
       inputs[num_inputs].time_stamp = ts;
@@ -281,7 +281,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
   }
   if (s_state->cfg.bsec.iaq_auto_cal && ev_arg.iaq.time_stamp > 0) {
     if (ev_arg.iaq.accuracy < 3 &&
-        s_state->iaq_cal_cycles < MGOS_BME680_BSEC_MIN_CAL_CYCLES) {
+        s_state->iaq_cal_cycles < MGOS_BME68X_BSEC_MIN_CAL_CYCLES) {
       if (s_state->iaq_cal_cycles == 0) {
         if (ev_arg.iaq.accuracy == 2) {
           LOG(LL_INFO, ("IAQ sensor is calibrating"));
@@ -290,7 +290,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
         }
         mgos_bsec_set_iaq_sample_rate_int(BSEC_SAMPLE_RATE_LP);
       }
-      s_state->iaq_cal_cycles = MGOS_BME680_BSEC_MIN_CAL_CYCLES;
+      s_state->iaq_cal_cycles = MGOS_BME68X_BSEC_MIN_CAL_CYCLES;
     }
     if (ev_arg.iaq.accuracy == 3 && s_state->iaq_cal_cycles > 0) {
       s_state->iaq_cal_cycles--;
@@ -300,11 +300,11 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
       }
     }
   }
-  mgos_event_trigger(MGOS_EV_BME680_BSEC_OUTPUT, &ev_arg);
+  mgos_event_trigger(MGOS_EV_BME68X_BSEC_OUTPUT, &ev_arg);
 }
 
-static int mgos_bme680_run_once(int *delay_ms) {
-  int8_t bme680_status;
+static int mgos_bme68x_run_once(int *delay_ms) {
+  int8_t bme68x_status;
   int64_t ts = s_state->next_ts;
   static bsec_bme_settings_t ss = {0};
   bsec_library_return_t ret = bsec_sensor_control(ts, &ss);
@@ -325,22 +325,22 @@ static int mgos_bme680_run_once(int *delay_ms) {
     s_state->dev.gas_sett.run_gas = ss.run_gas;
     s_state->dev.gas_sett.heatr_temp = ss.heater_temperature;
     s_state->dev.gas_sett.heatr_dur = ss.heater_duration;
-    s_state->dev.power_mode = BME680_FORCED_MODE;
-    bme680_status =
-        bme680_set_sensor_settings((BME680_OST_SEL | BME680_OSP_SEL |
-                                    BME680_OSH_SEL | BME680_GAS_SENSOR_SEL),
+    s_state->dev.power_mode = BME68X_FORCED_MODE;
+    bme68x_status =
+        bme68x_set_sensor_settings((BME68X_OST_SEL | BME68X_OSP_SEL |
+                                    BME68X_OSH_SEL | BME68X_GAS_SENSOR_SEL),
                                    &s_state->dev);
-    if (bme680_status != 0) {
-      LOG(LL_ERROR, ("Failed to set BME680 %s: %d", "settings", bme680_status));
+    if (bme68x_status != 0) {
+      LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "settings", bme68x_status));
       return -1000;
     }
-    bme680_status = bme680_set_sensor_mode(&s_state->dev);
-    if (bme680_status != 0) {
-      LOG(LL_ERROR, ("Failed to set BME680 %s: %d", "mode", bme680_status));
+    bme68x_status = bme68x_set_sensor_mode(&s_state->dev);
+    if (bme68x_status != 0) {
+      LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "mode", bme68x_status));
       return -1001;
     }
     uint16_t meas_period = 0;
-    bme680_get_profile_dur(&meas_period, &s_state->dev);
+    bme68x_get_profile_dur(&meas_period, &s_state->dev);
     ss.next_call = ts;
     s_state->meas_timer_id =
         mgos_set_timer(meas_period, 0, mgos_bsec_meas_timer_cb, &ss);
@@ -353,7 +353,7 @@ static int mgos_bme680_run_once(int *delay_ms) {
 static void mgos_bsec_timer_cb(void *arg) {
   s_state->bsec_timer_id = MGOS_INVALID_TIMER_ID;
   int delay_ms = 0;
-  int ret = mgos_bme680_run_once(&delay_ms);
+  int ret = mgos_bme68x_run_once(&delay_ms);
   if (ret != BSEC_OK) {
     LOG(LL_ERROR, ("BSEC run failed: %d", ret));
     delay_ms = 10000;
@@ -385,7 +385,7 @@ static float sr_from_str(const char *sr_str) {
   return BSEC_SAMPLE_RATE_DISABLED;
 }
 
-bool mgos_bme680_bsec_init(void) {
+bool mgos_bme68x_bsec_init(void) {
   bsec_version_t v;
   bsec_library_return_t ret;
   if (bsec_init() != BSEC_OK || bsec_get_version(&v) != BSEC_OK) {
@@ -448,7 +448,7 @@ bool mgos_bme680_bsec_init(void) {
   return true;
 }
 
-bool mgos_bme680_init_cfg(const struct mgos_config_bme680 *cfg) {
+bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg) {
   if (!cfg->enable) return false;
 
   s_state = (struct mgos_bme68x_state *) calloc(1, sizeof(*s_state));
@@ -456,21 +456,21 @@ bool mgos_bme680_init_cfg(const struct mgos_config_bme680 *cfg) {
   s_state->prev_iaq_sr = BSEC_SAMPLE_RATE_DISABLED;
   s_state->cfg = *cfg;
 
-  int8_t bme680_status =
+  int8_t bme68x_status =
       mgos_bme68_init_dev_i2c(&s_state->dev, cfg->i2c_bus, cfg->i2c_addr);
 
   LOG(LL_INFO, ("BME68x @ %d/0x%x init %s", cfg->i2c_bus, cfg->i2c_addr,
-                (bme680_status == BME68x_OK ? "ok" : "failed")));
-  if (bme680_status != BME68x_OK) return false;
+                (bme68x_status == BME68x_OK ? "ok" : "failed")));
+  if (bme68x_status != BME68x_OK) return false;
 
-  if (cfg->bsec.enable && !mgos_bme680_bsec_init()) {
+  if (cfg->bsec.enable && !mgos_bme68x_bsec_init()) {
     return false;
   }
 
   return true;
 }
 
-bool mgos_bme680_init(void) {
-  if (!mgos_sys_config_get_bme680_enable()) return true;
-  return mgos_bme680_init_cfg(mgos_sys_config_get_bme680());
+bool mgos_bme68x_init(void) {
+  if (!mgos_sys_config_get_bme68x_enable()) return true;
+  return mgos_bme68x_init_cfg(mgos_sys_config_get_bme68x());
 }

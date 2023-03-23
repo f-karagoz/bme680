@@ -29,10 +29,10 @@
 extern "C" {
 #endif
 
-#define MGOS_EV_BME680_BASE MGOS_EVENT_BASE('B', '6', '8')
+#define MGOS_EV_BME68X_BASE MGOS_EVENT_BASE('B', '6', '8')
 enum mgos_bme68x_event {
-  MGOS_EV_BME680_BSEC_OUTPUT =
-      MGOS_EV_BME680_BASE, /* ev_data: struct mgos_bsec_output */
+  MGOS_EV_BME68X_BSEC_OUTPUT =
+      MGOS_EV_BME68X_BASE, /* ev_data: struct mgos_bsec_output */
 };
 
 struct mgos_bsec_output {
@@ -76,12 +76,12 @@ bsec_library_return_t mgos_bsec_set_rh_sample_rate(float sr);
 // requested via bsec_update_subscription();
 bool mgos_bsec_start(void);
 
-// Init BME680 library with specific config.
+// Init BME68X library with specific config.
 // Useful when initialization should be delayed until after application is
 // started.
 bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg);
 
-// Initialize BME680 device on a specific I2C bus at specific address (0x76 or
+// Initialize BME68X device on a specific I2C bus at specific address (0x76 or
 // 0x77).
 int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr);
 
