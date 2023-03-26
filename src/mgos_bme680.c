@@ -46,19 +46,33 @@ static struct mgos_bme68x_state *s_state;
 
 static void mgos_bsec_timer_cb(void *arg);
 
-static int8_t bme68x_i2c_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *data,
-                              uint16_t len) {
-  struct mgos_i2c *bus = mgos_i2c_get_bus(dev_id >> 1);
-  int addr = BME68X_I2C_ADDR_PRIMARY + (dev_id & 1);
-  return mgos_i2c_read_reg_n(bus, addr, reg_addr, len, data) ? 0 : -1;
+static BME68X_INTF_RET_TYPE bme68x_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr)
+{
+  (void)intf_ptr;   // Suppress compiler warning
+  // TODO check bus
+  struct mgos_i2c *bus = mgos_i2c_get_bus(BME68X_I2C_ADDR_LOW); 
+  // TODO get 'bus' and 'addr' (DONE)
+  return mgos_i2c_read_reg_n(bus, BME68X_I2C_ADDR_LOW, reg_addr, length, reg_data) ? 0 : -1;
 }
 
-static int8_t bme68x_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data,
-                               uint16_t len) {
+/* TODO implement this */
+static BME68X_INTF_RET_TYPE bme68x_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr)
+{
+  (void)intf_ptr;   // Suppress compiler warning
+  // TODO check bus
+  struct mgos_i2c *bus = mgos_i2c_get_bus(BME68X_I2C_ADDR_LOW); 
+  // TODO get 'bus' and 'addr' (DONE)
+  return mgos_i2c_write_reg_n(bus, BME68X_I2C_ADDR_LOW, reg_addr, length, reg_data) ? 0 : -1;
+}
+
+/* TODO remove this 
+static int8_t bme68x_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, uint16_t len)
+{
   struct mgos_i2c *bus = mgos_i2c_get_bus(dev_id >> 1);
-  int addr = BME68X_I2C_ADDR_PRIMARY + (dev_id & 1);
+  int addr = BME68X_I2C_ADDR_LOW + (dev_id & 1);
   return mgos_i2c_write_reg_n(bus, addr, reg_addr, len, data) ? 0 : -1;
 }
+*/
 
 static void bme68x_delay_ms(uint32_t period) {
   mgos_msleep(period);
@@ -180,8 +194,15 @@ int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
   dev->intf = BME68X_I2C_INTF;
   dev->dev_id = (bus_no << 1) | (addr & 1);
   dev->read = bme68x_i2c_read;
+  /*
+  assignment to 'bme68x_read_fptr_t'
+  {aka 'signed char (*)(unsigned char,  unsigned char *, unsigned int,  void *)'}
+  from incompatible pointer type
+  'int8_t (*)(uint8_t,  uint8_t,  uint8_t *, uint16_t)'
+  {aka 'signed char (*)(unsigned char,  unsigned char,  unsigned char *, short unsigned int)'}
+  */
   dev->write = bme68x_i2c_write;
-  dev->delay_ms = bme68x_delay_ms;
+  dev->delay_us = bme68x_delay_ms * 1000;
   return bme68x_init(dev);
 }
 
