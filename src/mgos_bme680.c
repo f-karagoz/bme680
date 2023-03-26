@@ -74,8 +74,8 @@ static int8_t bme68x_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, 
 }
 */
 
-static void bme68x_delay_ms(uint32_t period) {
-  mgos_msleep(period);
+static void bme68x_delay_us(uint32_t period) {
+  mgos_msleep(period * 1000);
 }
 
 bsec_library_return_t mgos_bsec_set_configuration_from_file(const char *file) {
@@ -192,28 +192,25 @@ bool mgos_bsec_start(void) {
 
 int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
   dev->intf = BME68X_I2C_INTF;
-  dev->dev_id = (bus_no << 1) | (addr & 1);
+  // dev->dev_id = (bus_no << 1) | (addr & 1);
   dev->read = bme68x_i2c_read;
-  /*
-  assignment to 'bme68x_read_fptr_t'
-  {aka 'signed char (*)(unsigned char,  unsigned char *, unsigned int,  void *)'}
-  from incompatible pointer type
-  'int8_t (*)(uint8_t,  uint8_t,  uint8_t *, uint16_t)'
-  {aka 'signed char (*)(unsigned char,  unsigned char,  unsigned char *, short unsigned int)'}
-  */
   dev->write = bme68x_i2c_write;
-  dev->delay_us = bme68x_delay_ms * 1000;
+  dev->delay_us = bme68x_delay_us;
   return bme68x_init(dev);
 }
 
+// TODO use this to work with power modes:
+// int8_t bme68x_set_op_mode(const uint8_t op_mode, struct bme68x_dev *dev)
+// int8_t bme68x_get_op_mode(uint8_t *op_mode, struct bme68x_dev *dev)
 static void mgos_bsec_meas_timer_cb(void *arg) {
   int8_t bme68x_status;
+  uint8_t power_mode = 0;
   const bsec_bme_settings_t *ss = (bsec_bme_settings_t *) arg;
   int64_t ts = ss->next_call;
   s_state->meas_timer_id = MGOS_INVALID_TIMER_ID;
   if (ss->trigger_measurement) {
-    while (s_state->dev.power_mode != BME68X_SLEEP_MODE) {
-      if (bme68x_get_sensor_mode(&s_state->dev) != 0) return;
+    while (power_mode != BME68X_SLEEP_MODE) {           // TODO inspect why we need to in sleep
+      if (bme68x_get_op_mode(power_mode, &s_state->dev) != 0) return;
     }
   }
   if (ss->process_data == 0) return;
@@ -346,7 +343,11 @@ static int mgos_bme68x_run_once(int *delay_ms) {
     s_state->dev.gas_sett.run_gas = ss.run_gas;
     s_state->dev.gas_sett.heatr_temp = ss.heater_temperature;
     s_state->dev.gas_sett.heatr_dur = ss.heater_duration;
-    s_state->dev.power_mode = BME68X_FORCED_MODE;
+    if (bme68x_set_op_mode(BME68X_FORCED_MODE, &s_state->dev) != BME68X_OK)
+    {
+      LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "op mode", bme68x_status));
+      return -1002;
+    }
     bme68x_status =
         bme68x_set_sensor_settings((BME68X_OST_SEL | BME68X_OSP_SEL |
                                     BME68X_OSH_SEL | BME68X_GAS_SENSOR_SEL),
