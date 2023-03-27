@@ -192,7 +192,7 @@ bool mgos_bsec_start(void) {
   return true;
 }
 
-int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
+int8_t mgos_bme68x_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
   dev->intf = BME68X_I2C_INTF;
   // dev->dev_id = (bus_no << 1) | (addr & 1);
   dev->read = bme68x_i2c_read;
@@ -490,7 +490,7 @@ bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg) {
   s_state->cfg = *cfg;
 
   int8_t bme68x_status =
-      mgos_bme68_init_dev_i2c(&s_state->dev, cfg->i2c_bus, cfg->i2c_addr);
+      mgos_bme68x_init_dev_i2c(&s_state->dev, cfg->i2c_bus, cfg->i2c_addr);
 
   LOG(LL_INFO, ("BME68x @ %d/0x%x init %s", cfg->i2c_bus, cfg->i2c_addr,
                 (bme68x_status == BME68X_OK ? "ok" : "failed")));
@@ -503,7 +503,7 @@ bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg) {
   return true;
 }
 
-bool mgos_bme68x_init(void) {
+bool mgos_bme680_init(void) {
   if (!mgos_sys_config_get_bme68x_enable()) return true;
   return mgos_bme68x_init_cfg(mgos_sys_config_get_bme68x());
 }

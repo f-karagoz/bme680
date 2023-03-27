@@ -51,6 +51,6 @@ conds:
 tags:
   - c
   - hw
-  - docs:drivers:BME680
+  # - docs:drivers:BME680
 
 manifest_version: 2017-06-29
