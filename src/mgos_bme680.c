@@ -33,6 +33,8 @@
 struct mgos_bme68x_state {
   struct mgos_config_bme68x cfg;
   struct bme68x_dev dev;
+  struct bme68x_conf tph_sett;
+  struct bme68x_heatr_conf gas_sett;
   mgos_timer_id bsec_timer_id;
   mgos_timer_id meas_timer_id;
   int64_t next_ts;
@@ -55,7 +57,6 @@ static BME68X_INTF_RET_TYPE bme68x_i2c_read(uint8_t reg_addr, uint8_t *reg_data,
   return mgos_i2c_read_reg_n(bus, BME68X_I2C_ADDR_LOW, reg_addr, length, reg_data) ? 0 : -1;
 }
 
-/* TODO implement this */
 static BME68X_INTF_RET_TYPE bme68x_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
   (void)intf_ptr;   // Suppress compiler warning
@@ -74,8 +75,9 @@ static int8_t bme68x_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *data, 
 }
 */
 
-static void bme68x_delay_us(uint32_t period) {
+static void bme68x_delay_us(uint32_t period, void *intf_ptr) {
   mgos_msleep(period * 1000);
+  (void)intf_ptr;               // Suppress compiler warning
 }
 
 bsec_library_return_t mgos_bsec_set_configuration_from_file(const char *file) {
@@ -199,25 +201,24 @@ int8_t mgos_bme68_init_dev_i2c(struct bme68x_dev *dev, int bus_no, int addr) {
   return bme68x_init(dev);
 }
 
-// TODO use this to work with power modes:
-// int8_t bme68x_set_op_mode(const uint8_t op_mode, struct bme68x_dev *dev)
-// int8_t bme68x_get_op_mode(uint8_t *op_mode, struct bme68x_dev *dev)
 static void mgos_bsec_meas_timer_cb(void *arg) {
   int8_t bme68x_status;
   uint8_t power_mode = 0;
+  uint8_t n_data = 0;
   const bsec_bme_settings_t *ss = (bsec_bme_settings_t *) arg;
   int64_t ts = ss->next_call;
   s_state->meas_timer_id = MGOS_INVALID_TIMER_ID;
   if (ss->trigger_measurement) {
-    while (power_mode != BME68X_SLEEP_MODE) {           // TODO inspect why we need to in sleep
-      if (bme68x_get_op_mode(power_mode, &s_state->dev) != 0) return;
+    while (power_mode != BME68X_SLEEP_MODE) {         // TODO inspect why we need to in sleep
+      if (bme68x_get_op_mode(&power_mode, &s_state->dev) != 0) return;
     }
   }
   if (ss->process_data == 0) return;
-  uint8_t num_inputs = 0;
+  uint8_t num_inputs = 0;           // TODO check id 'n_data' can be used in place of this
   bsec_input_t inputs[BSEC_MAX_PHYSICAL_SENSOR];
-  static struct bme68x_field_data data;
-  bme68x_status = bme68x_get_sensor_data(&data, &s_state->dev);
+  static struct bme68x_data data;
+  // reading in forced mode
+  bme68x_status = bme68x_get_data(BME68X_FORCED_MODE, &data, &n_data, &s_state->dev);
   if (bme68x_status != 0) {
     LOG(LL_ERROR, ("Failed to read sensor data: %d", bme68x_status));
     return;
@@ -337,35 +338,45 @@ static int mgos_bme68x_run_once(int *delay_ms) {
   s_state->next_ts = ss.next_call;
   *delay_ms = (ss.next_call - ts) / 1000000;
   if (ss.trigger_measurement) {
-    s_state->dev.tph_sett.os_hum = ss.humidity_oversampling;
-    s_state->dev.tph_sett.os_pres = ss.pressure_oversampling;
-    s_state->dev.tph_sett.os_temp = ss.temperature_oversampling;
-    s_state->dev.gas_sett.run_gas = ss.run_gas;
-    s_state->dev.gas_sett.heatr_temp = ss.heater_temperature;
-    s_state->dev.gas_sett.heatr_dur = ss.heater_duration;
-    if (bme68x_set_op_mode(BME68X_FORCED_MODE, &s_state->dev) != BME68X_OK)
+    s_state->tph_sett.os_hum = ss.humidity_oversampling;
+    s_state->tph_sett.os_pres = ss.pressure_oversampling;
+    s_state->tph_sett.os_temp = ss.temperature_oversampling;
+    s_state->gas_sett.enable = ss.run_gas;
+    s_state->gas_sett.heatr_temp = ss.heater_temperature;
+    s_state->gas_sett.heatr_dur = ss.heater_duration;
+    bme68x_status = bme68x_set_op_mode(BME68X_FORCED_MODE, &s_state->dev);
+    if (bme68x_status != BME68X_OK)
     {
       LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "op mode", bme68x_status));
       return -1002;
     }
-    bme68x_status =
-        bme68x_set_sensor_settings((BME68X_OST_SEL | BME68X_OSP_SEL |
-                                    BME68X_OSH_SEL | BME68X_GAS_SENSOR_SEL),
-                                   &s_state->dev);
+  
+    bme68x_status = bme68x_set_conf(&s_state->tph_sett, &s_state->dev);
+    // TODO check if we set the correct fields with the new method
+    // maybe: BME680_OST_SEL=BME68X_OST_MSK ,BME68X_OSP_SEL=BME68X_OSP_MSK ,
+    //        BME68X_OSH_SEL=BME68X_OSH_MSK ,BME68X_GAS_SENSOR_SEL=BME68X_GAS_RANGE_MSK
+    // bme68x_status =
+    //     bme68x_set_sensor_settings((BME680_OST_SEL | BME68X_OSP_SEL |
+    //                                 BME68X_OSH_SEL | BME68X_GAS_SENSOR_SEL),
+    //                                &s_state->dev);
     if (bme68x_status != 0) {
       LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "settings", bme68x_status));
       return -1000;
     }
-    bme68x_status = bme68x_set_sensor_mode(&s_state->dev);
-    if (bme68x_status != 0) {
+    bme68x_status = bme68x_set_op_mode(BME68X_FORCED_MODE, &s_state->dev);
+    if (bme68x_status != BME68X_OK) {
       LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "mode", bme68x_status));
       return -1001;
     }
-    uint16_t meas_period = 0;
-    bme68x_get_profile_dur(&meas_period, &s_state->dev);
+    // Gets the meas_period as 's_state->gas_sett.heatr_dur'
+    bme68x_status =  bme68x_get_heatr_conf(&s_state->gas_sett, &s_state->dev);
+    if (bme68x_status != BME68X_OK) {
+      LOG(LL_ERROR, ("Failed to set BME68X %s: %d", "heater duration", bme68x_status));
+      return -1002;
+    }
     ss.next_call = ts;
     s_state->meas_timer_id =
-        mgos_set_timer(meas_period, 0, mgos_bsec_meas_timer_cb, &ss);
+        mgos_set_timer(s_state->gas_sett.heatr_dur, 0, mgos_bsec_meas_timer_cb, &ss);
   } else {
     mgos_bsec_meas_timer_cb(&ss);
   }
@@ -482,8 +493,8 @@ bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg) {
       mgos_bme68_init_dev_i2c(&s_state->dev, cfg->i2c_bus, cfg->i2c_addr);
 
   LOG(LL_INFO, ("BME68x @ %d/0x%x init %s", cfg->i2c_bus, cfg->i2c_addr,
-                (bme68x_status == BME68x_OK ? "ok" : "failed")));
-  if (bme68x_status != BME68x_OK) return false;
+                (bme68x_status == BME68X_OK ? "ok" : "failed")));
+  if (bme68x_status != BME68X_OK) return false;
 
   if (cfg->bsec.enable && !mgos_bme68x_bsec_init()) {
     return false;

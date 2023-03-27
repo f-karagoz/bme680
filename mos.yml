@@ -36,6 +36,7 @@ config_schema:
 
 cdefs:
   BME68X_FLOAT_POINT_COMPENSATION: 1
+  # BME68X_USE_FPU: 1
 
 conds:
   - when: mos.platform == "esp8266"
