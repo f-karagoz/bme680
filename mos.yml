@@ -9,7 +9,7 @@ sources:
 
 includes:
   - include
-  - BSEC_1.4.7.4_Generic_Release/algo/normal_version/inc
+  - BSEC_1.4.7.4_Generic_Release/BSEC/inc
 
 libs:
   - location: https://github.com/mongoose-os-libs/i2c
@@ -41,11 +41,11 @@ conds:
   - when: mos.platform == "esp8266"
     apply:
       binary_libs:
-        - BSEC_1.4.7.4_Generic_Release/algo/normal_version/bin/esp8266/libalgobsec.a
+        - BSEC_1.4.7.4_Generic_Release/BSEC/bin/esp8266/libalgobsec.a
   - when: mos.platform == "esp32"
     apply:
       binary_libs:
-        - BSEC_1.4.7.4_Generic_Release/algo/normal_version/bin/esp32/libalgobsec.a
+        - BSEC_1.4.7.4_Generic_Release/BSEC/bin/esp32/libalgobsec.a
 
 tags:
   - c
