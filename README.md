@@ -1,4 +1,4 @@
-# BME680 sensor driver library for Mongoose OS
+# BME68x sensor driver library for Mongoose OS
 
 ## Overview
 
