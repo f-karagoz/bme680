@@ -504,7 +504,7 @@ bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg) {
 }
 
 // Mongoose OS library initialization
-bool mgos_bme680_init(void) {
+bool mgos_bme68x_init(void) {
   if (!mgos_sys_config_get_bme68x_enable()) return true;
   return mgos_bme68x_init_cfg(mgos_sys_config_get_bme68x());
 }
