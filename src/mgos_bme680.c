@@ -233,7 +233,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
     if (ss->process_data & BSEC_PROCESS_TEMPERATURE) {
       /* Place temperature sample into input struct */
       inputs[num_inputs].sensor_id = BSEC_INPUT_TEMPERATURE;
-#ifdef BME68X_FLOAT_POINT_COMPENSATION
+#ifdef BME68X_USE_FPU
       inputs[num_inputs].signal = data.temperature;
 #else
       inputs[num_inputs].signal = data.temperature / 100.0f;
@@ -247,7 +247,7 @@ static void mgos_bsec_meas_timer_cb(void *arg) {
     }
     if (ss->process_data & BSEC_PROCESS_HUMIDITY) {
       inputs[num_inputs].sensor_id = BSEC_INPUT_HUMIDITY;
-#ifdef BME68X_FLOAT_POINT_COMPENSATION
+#ifdef BME68X_USE_FPU
       inputs[num_inputs].signal = data.humidity;
 #else
       inputs[num_inputs].signal = data.humidity / 1000.0f;
@@ -503,6 +503,7 @@ bool mgos_bme68x_init_cfg(const struct mgos_config_bme68x *cfg) {
   return true;
 }
 
+// Mongoose OS library initialization
 bool mgos_bme680_init(void) {
   if (!mgos_sys_config_get_bme68x_enable()) return true;
   return mgos_bme68x_init_cfg(mgos_sys_config_get_bme68x());

@@ -1,6 +1,6 @@
 Parts of the library are covered by different licenses
 
-## BME680 driver
+## BME68X driver
 
 ```
 Copyright (C) 2017 - 2018 Bosch Sensortec GmbH
@@ -112,6 +112,7 @@ patent rights of the copyright holder.
 
 ```
 Copyright (c) 2019 Deomid "rojer" Ryabkov
+Copyright (c) 2023 Apollon's 3 Rings LLC
 All rights reserved
 
 Licensed under the Apache License, Version 2.0(the "License");
