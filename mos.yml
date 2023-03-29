@@ -35,7 +35,7 @@ config_schema:
   - ["bme68x.bsec.iaq_auto_cal", "b", true, {"title": "Automatically calibrate IAQ sensor if not calibrated. Will raise IAQ sampling rate to LP until sensor is calibrated."}]
 
 cdefs:
-  BME68X_USE_FPU: 1
+  # BME68X_DO_NOT_USE_FPU: 1
 
 conds:
   - when: mos.platform == "esp8266"
